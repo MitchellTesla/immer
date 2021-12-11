@@ -185,7 +185,7 @@ export class Immer implements ProducersFns {
 		this.useProxies_ = value
 	}
 
-	applyPatches<T extends Objectish>(base: Objectish, patches: Patch[]): T {
+	applyPatches<T extends Objectish>(base: T, patches: Patch[]): T {
 		// If a patch replaces the entire state, take that replacement as base
 		// before applying patches
 		let i: number
@@ -196,16 +196,21 @@ export class Immer implements ProducersFns {
 				break
 			}
 		}
+		// If there was a patch that replaced the entire state, start from the
+		// patch after that.
+		if (i > -1) {
+			patches = patches.slice(i + 1)
+		}
 
 		const applyPatchesImpl = getPlugin("Patches").applyPatches_
 		if (isDraft(base)) {
 			// N.B: never hits if some patch a replacement, patches are never drafts
-			return applyPatchesImpl(base, patches) as any
+			return applyPatchesImpl(base, patches)
 		}
 		// Otherwise, produce a copy of the base state.
 		return this.produce(base, (draft: Drafted) =>
-			applyPatchesImpl(draft, patches.slice(i + 1))
-		) as any
+			applyPatchesImpl(draft, patches)
+		)
 	}
 }
 

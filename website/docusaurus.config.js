@@ -1,10 +1,10 @@
-// See https://v2.docusaurus.io/docs/configuration for more information
+// See https://v2.docusaurus.io/docs/configuration for more information.
 
 module.exports = {
 	title: "Immer",
 	tagline: "Create the next immutable state by mutating the current one.",
 	url: "https://immerjs.github.io/",
-	baseUrl: "/immer/",
+	baseUrl: process.env.NETLIFY_PREVIEW ? "/" : "/immer/",
 	projectName: "immer",
 	organizationName: "immerjs",
 	onBrokenLinks: "throw",
@@ -17,6 +17,7 @@ module.exports = {
 		},
 		navbar: {
 			title: "Immer",
+			style: "dark",
 			logo: {
 				src: "/img/immer-logo.svg",
 				alt: "Immer Logo"

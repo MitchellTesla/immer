@@ -15,8 +15,7 @@ import {
 	DRAFT_STATE,
 	die,
 	createProxy,
-	ProxyTypeProxyObject,
-	ProxyTypeProxyArray
+	ProxyType
 } from "../internal"
 
 interface ProxyBaseState extends ImmerBaseState {
@@ -28,14 +27,14 @@ interface ProxyBaseState extends ImmerBaseState {
 }
 
 export interface ProxyObjectState extends ProxyBaseState {
-	type_: typeof ProxyTypeProxyObject
+	type_: ProxyType.ProxyObject
 	base_: any
 	copy_: any
 	draft_: Drafted<AnyObject, ProxyObjectState>
 }
 
 export interface ProxyArrayState extends ProxyBaseState {
-	type_: typeof ProxyTypeProxyArray
+	type_: ProxyType.ProxyArray
 	base_: AnyArray
 	copy_: AnyArray | null
 	draft_: Drafted<AnyArray, ProxyArrayState>
@@ -54,7 +53,7 @@ export function createProxyProxy<T extends Objectish>(
 ): Drafted<T, ProxyState> {
 	const isArray = Array.isArray(base)
 	const state: ProxyState = {
-		type_: isArray ? ProxyTypeProxyArray : (ProxyTypeProxyObject as any),
+		type_: isArray ? ProxyType.ProxyArray : (ProxyType.ProxyObject as any),
 		// Track which produce call this is associated with.
 		scope_: parent ? parent.scope_ : getCurrentScope()!,
 		// True for both shallow and deep changes.
@@ -158,7 +157,14 @@ export const objectTraps: ProxyHandler<ProxyState> = {
 			markChanged(state)
 		}
 
-		if (state.copy_![prop] === value && typeof value !== "number") return true
+		if (
+			state.copy_![prop] === value &&
+			// special case: NaN
+			typeof value !== "number" &&
+			// special case: handle new props with value 'undefined'
+			(value !== undefined || prop in state.copy_)
+		)
+			return true
 
 		// @ts-ignore
 		state.copy_![prop] = value
@@ -187,7 +193,7 @@ export const objectTraps: ProxyHandler<ProxyState> = {
 		if (!desc) return desc
 		return {
 			writable: true,
-			configurable: state.type_ !== ProxyTypeProxyArray || prop !== "length",
+			configurable: state.type_ !== ProxyType.ProxyArray || prop !== "length",
 			enumerable: desc.enumerable,
 			value: owner[prop]
 		}

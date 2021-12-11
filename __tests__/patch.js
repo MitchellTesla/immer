@@ -5,7 +5,8 @@ import produce, {
 	produceWithPatches,
 	enableAllPlugins,
 	isDraft,
-	immerable
+	immerable,
+	nothing
 } from "../src/immer"
 
 enableAllPlugins()
@@ -719,6 +720,22 @@ describe("arrays - delete", () => {
 	)
 })
 
+describe("arrays - append", () => {
+	test("appends to array when last part of path is '-'", () => {
+		const state = {
+			list: [1, 2, 3]
+		}
+		const patch = {
+			op: "add",
+			value: 4,
+			path: ["list", "-"]
+		}
+		expect(applyPatches(state, [patch])).toEqual({
+			list: [1, 2, 3, 4]
+		})
+	})
+})
+
 describe("sets - add - 1", () => {
 	runPatchTest(
 		new Set([1]),
@@ -1257,6 +1274,24 @@ test("maps can store __proto__, prototype and constructor props", () => {
 	expect(obj.polluted).toBe(undefined)
 })
 
+test("CVE-2020-28477 (https://snyk.io/vuln/SNYK-JS-IMMER-1019369) follow up", () => {
+	const obj = {}
+
+	// @ts-ignore
+	expect(obj.polluted).toBe(undefined)
+	expect(() => {
+		applyPatches({}, [
+			{op: "add", path: [["__proto__"], "polluted"], value: "yes"}
+		])
+	}).toThrow(
+		isProd
+			? "24"
+			: "Patching reserved attributes like __proto__, prototype and constructor is not allowed"
+	)
+	// @ts-ignore
+	expect(obj.polluted).toBe(undefined)
+})
+
 test("#648 assigning object to itself should not change patches", () => {
 	const input = {
 		obj: {
@@ -1276,4 +1311,11 @@ test("#648 assigning object to itself should not change patches", () => {
 			value: 1
 		}
 	])
+})
+
+test("#791 patch for  nothing is stored as undefined", () => {
+	const [newState, patches] = produceWithPatches({abc: 123}, draft => nothing)
+	expect(patches).toEqual([{op: "replace", path: [], value: undefined}])
+
+	expect(applyPatches({}, patches)).toEqual(undefined)
 })
